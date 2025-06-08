@@ -2,6 +2,7 @@ from data import train_data, test_data, encode, decode
 from model import GPT, device, model
 import torch
 from torch import nn
+import os
 
 # vocab_size = 104
 # context_length = 128 #block_size
@@ -17,7 +18,7 @@ max_iters = 5000
 eval_interval = 500
 learning_rate = 3e-4
 eval_iters = 200
-
+out_dir='checkpoint'
 
 
 
@@ -69,7 +70,20 @@ for iter in range(max_iters):
     loss.backward()
     optimizer.step()
 
-# generate from the model
+checkpoint = {
+    'model': model.state_dict()
+}
+
+print(f"saving checkpoint to {out_dir}")
+torch.save(checkpoint, os.path.join(out_dir, 'ckpt.pt'))
+
+
+checkpoint_path = os.path.join(out_dir, 'ckpt.pt')
+if os.path.exists(checkpoint_path):
+    print(f"Loading checkpoint from {checkpoint_path}")
+    checkpoint = torch.load(checkpoint_path)
+    model.load_state_dict(checkpoint['model'])
+
 context = torch.zeros((1, 1), dtype=torch.long, device=device)
 print(decode(model.generate(context, max_new_tokens=50)[0].tolist()))
 
