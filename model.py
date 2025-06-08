@@ -80,6 +80,16 @@ class GPT(nn.Module):
         self.layer_norm_three = nn.LayerNorm(model_dim)
         self.vocab_projection = nn.Linear(model_dim, vocab_size)
 
+        self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+
     def forward(self, context):
         embedded = self.token_embedding(context)
         context_length = context.shape[1]
@@ -97,8 +107,8 @@ class GPT(nn.Module):
 # from model import GPT, device
 # import torch
 # from torch import nn
-
-vocab_size = 104
+from data import vocab_size
+# vocab_size = 155
 context_length = 128 #block_size
 model_dim = 252
 num_blocks = 6

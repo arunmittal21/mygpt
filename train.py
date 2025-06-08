@@ -1,5 +1,5 @@
 from data import train_data, test_data, encode, decode
-from model import GPT, device, model
+from model import GPT, device, model, context_length
 import torch
 from torch import nn
 import os
@@ -40,7 +40,12 @@ def estimate_loss():
         losses = torch.zeros(eval_iters)
         for k in range(eval_iters):
             X, Y = get_batch(split)
-            logits, loss = model(X, Y)
+            logits = model(X)
+
+            B, T, C = logits.shape
+            logits = logits.view(B*T, C)
+            targets = Y.view(B*T)
+            loss = nn.functional.cross_entropy(logits, targets)
             losses[k] = loss.item()
         out[split] = losses.mean()
     model.train()
@@ -77,13 +82,5 @@ checkpoint = {
 print(f"saving checkpoint to {out_dir}")
 torch.save(checkpoint, os.path.join(out_dir, 'ckpt.pt'))
 
-
-checkpoint_path = os.path.join(out_dir, 'ckpt.pt')
-if os.path.exists(checkpoint_path):
-    print(f"Loading checkpoint from {checkpoint_path}")
-    checkpoint = torch.load(checkpoint_path)
-    model.load_state_dict(checkpoint['model'])
-
-context = torch.zeros((1, 1), dtype=torch.long, device=device)
-print(decode(model.generate(context, max_new_tokens=50)[0].tolist()))
+import test.py
 

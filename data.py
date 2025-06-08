@@ -1,12 +1,15 @@
 import pandas as pd
+import torch 
 
 df = pd.read_csv('dad_jokes.csv')
-column_text = df.iloc[:20, 1].astype(str).str.cat(sep=' ')
+column_text = df.iloc[:, 1].astype(str).str.cat(sep=' ')
 
 # print(column_text)
 
 chars = sorted(list(set(column_text)))
 vocab_size = len(chars)
+print(vocab_size)
+print(vocab_size)
 
 str_to_int = { ch:i for i,ch in enumerate(chars) }
 int_to_str = { i:ch for i,ch in enumerate(chars) }
