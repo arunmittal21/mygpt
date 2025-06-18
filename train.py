@@ -1,5 +1,5 @@
 from data import train_data, test_data, encode, decode
-from model import GPT, device, model, context_length
+from model_init import MY_MODEL as model, context_length, device
 import torch
 from torch import nn
 import os

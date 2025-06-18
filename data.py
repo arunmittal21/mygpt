@@ -1,8 +1,11 @@
 import pandas as pd
 import torch 
 
-df = pd.read_csv('dad_jokes.csv')
-column_text = df.iloc[:, 1].astype(str).str.cat(sep=' ')
+# df = pd.read_csv('training_data/dad_jokes.csv')
+# column_text = df.iloc[:, 1].astype(str).str.cat(sep=' ')
+
+df = pd.read_csv('training_data/movies-quotes.txt', sep="~")
+column_text = df.iloc[:, 2].astype(str).str.cat(sep=' ')
 
 # print(column_text)
 

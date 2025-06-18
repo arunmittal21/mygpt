@@ -103,17 +103,3 @@ class GPT(nn.Module):
         return raw_output
 
 
-# from data import train_data, test_data, encode, decode
-# from model import GPT, device
-# import torch
-# from torch import nn
-from data import vocab_size
-# vocab_size = 155
-context_length = 128 #block_size
-model_dim = 252
-num_blocks = 6
-num_heads = 6
-dropout = 0.2
-model = GPT(vocab_size, context_length, model_dim, num_blocks, num_heads,dropout).to(device)
-
-
