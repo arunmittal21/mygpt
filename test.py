@@ -1,4 +1,4 @@
-from model import model,context_length, device
+from model_init import MY_MODEL as model,context_length, device
 from data import decode, int_to_str
 import torch
 import os

@@ -5,7 +5,9 @@ import torch
 # column_text = df.iloc[:, 1].astype(str).str.cat(sep=' ')
 
 df = pd.read_csv('training_data/movies-quotes.txt', sep="~")
-column_text = df.iloc[:, 2].astype(str).str.cat(sep=' ')
+df_shuffled = df.sample(frac=1, random_state=42)  # Set random_state for reproducibility
+column_text = df_shuffled.iloc[:,2].astype(str).str.cat(sep=' ')
+print (column_text[:20])
 
 # print(column_text)
 
@@ -23,6 +25,7 @@ decode = lambda l: ''.join([int_to_str[i] for i in l])
 
 # Train and test splits
 data = torch.tensor(encode(column_text), dtype=torch.long)
+
 n = int(0.9*len(data)) # first 90% 
 train_data = data[:n]
 test_data = data[n:]
