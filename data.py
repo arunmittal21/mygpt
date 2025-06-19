@@ -1,12 +1,12 @@
 import pandas as pd
 import torch 
 
-# df = pd.read_csv('training_data/dad_jokes.csv')
-# column_text = df.iloc[:, 1].astype(str).str.cat(sep=' ')
+df = pd.read_csv('training_data/dad_jokes.csv')
+column_text = df.iloc[:, 1].astype(str).str.cat(sep=' ')
 
-df = pd.read_csv('training_data/movies-quotes.txt', sep="~")
-df_shuffled = df.sample(frac=1, random_state=42)  # Set random_state for reproducibility
-column_text = df_shuffled.iloc[:,2].astype(str).str.cat(sep=' ')
+# df = pd.read_csv('training_data/movies-quotes.txt', sep="~")
+# df_shuffled = df.sample(frac=1, random_state=42)  # Set random_state for reproducibility
+# column_text = df_shuffled.iloc[:,2].astype(str).str.cat(sep=' ')
 print (column_text[:20])
 
 # print(column_text)
