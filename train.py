@@ -75,12 +75,25 @@ for iter in range(max_iters):
     loss.backward()
     optimizer.step()
 
+# context_length = 128 #block_size
+# model_dim = 252
+# num_blocks = 6
+# num_heads = 6
+# dropout = 0.2
+# MY_MODEL = GPT(vocab_size, context_length, model_dim, num_blocks, num_heads, dropout).to(device)
+
 checkpoint = {
-    'model': model.state_dict()
+    'model': model.state_dict(),
+    'vocab_size': model.token_embedding.num_embeddings,
+    'context_length': context_length,
+    'model_dim': model.token_embedding.embedding_dim,
+    'num_blocks': len(model.blocks),
+    'num_heads': model.blocks[0].attention.num_heads,
+    'dropout': 0.2
 }
 
 print(f"saving checkpoint to {out_dir}")
 torch.save(checkpoint, os.path.join(out_dir, 'ckpt.pt'))
 
-import test.py
+import test
 

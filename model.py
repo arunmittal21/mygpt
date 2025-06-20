@@ -2,7 +2,15 @@ import torch
 import torch.nn as nn
 from torchtyping import TensorType
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+# device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
+
+print(f"Using device: {device}")
 
 class GPT(nn.Module):
     
@@ -14,6 +22,7 @@ class GPT(nn.Module):
         self.blocks = nn.Sequential(*[TransformerBlock(model_dim, num_heads) for _ in range(num_blocks)])
         self.final_norm = nn.LayerNorm(model_dim)
         self.output_projection = nn.Linear(model_dim, vocab_size)
+        # self.dropout = dropout
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
@@ -58,6 +67,7 @@ class MultiHeadedSelfAttention(nn.Module):
     def __init__(self, model_dim: int, num_heads: int):
         super().__init__()
         # torch.manual_seed(0)
+        self.num_heads = num_heads
         self.att_heads = nn.ModuleList([
             SingleHeadAttention(model_dim, model_dim // num_heads)
             for _ in range(num_heads)

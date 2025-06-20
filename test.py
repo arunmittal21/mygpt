@@ -1,18 +1,48 @@
-from model_init import MY_MODEL as model,context_length, device
+# from model_init import MY_MODEL as model,context_length, device
+from model import GPT, device
 from data import decode, int_to_str
 import torch
 import os
 
 out_dir='checkpoint'
 
-checkpoint_path = os.path.join(out_dir, 'ckpt.pt')
-if os.path.exists(checkpoint_path):
-    print(f"Loading checkpoint from {checkpoint_path}")
-    checkpoint = torch.load(checkpoint_path)
-    model.load_state_dict(checkpoint['model'])
+# checkpoint = {
+#     'model': model.state_dict(),
+#     'vocab_size': model.token_embedding.num_embeddings,
+#     'context_length': context_length,
+#     'model_dim': model.token_embedding.embedding_dim,
+#     'num_blocks': len(model.blocks),
+#     'num_heads': model.blocks[0].attention.num_heads,
+#     'dropout': 0.2
+# }
+
+def load_model(weights='ckpt.pt'):
+    checkpoint_path = os.path.join(out_dir, weights)
+    if os.path.exists(checkpoint_path):
+        print(f"Loading checkpoint from {checkpoint_path}")
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        context_length = int(checkpoint['context_length'])
+        model = GPT(
+            vocab_size=checkpoint['vocab_size'],
+            context_length=checkpoint['context_length'],
+            model_dim=checkpoint['model_dim'],
+            num_blocks=checkpoint['num_blocks'],
+            num_heads=checkpoint['num_heads'],
+            dropout=checkpoint['dropout']
+        ).to(device)
+        model.load_state_dict(checkpoint['model'])
+        model.eval()
+        print("Model loaded successfully.")
+        return model,context_length
+    else:
+        print(f"No checkpoint found at {checkpoint_path}.")
+        return None, None
 
 
-def generate(model, new_chars: int, context, context_length: int, int_to_str: dict, temperature = 1.0   ) -> str:
+
+from typing import Generator
+
+def generate(model, new_chars: int, context, context_length: int, int_to_str: dict, temperature = 1.0   ) -> Generator[str, None, None]:
     res = []
     for i in range(new_chars):
         if len(context.T) > context_length:
@@ -30,16 +60,20 @@ def generate(model, new_chars: int, context, context_length: int, int_to_str: di
     # return ''.join(res)
 
 
-context = torch.zeros(1, 1, dtype = torch.int64).to(device)
-print(context)
+# model = load_model('dadjokes-2.pt')
+model, context_length = load_model('movie-dialogs.pt')
+generate_len = 300  # block_size
 
+if model is not None and context_length is not None:
+    context = torch.zeros(1, 1, dtype=torch.int64).to(device)
+    print(context)
 
-for char in generate(model, new_chars=1000, context=context,
-                     context_length=context_length, int_to_str=int_to_str,
-                     temperature=0.5):
-    print(char, end='')  # print each character without newline
-    # print(char)  # print each character without newline
-    # pass
+    for char in generate(model, new_chars=generate_len, context=context,
+                         context_length=context_length, int_to_str=int_to_str,
+                         temperature=0.5):
+        print(char, end='')  # print each character without newline
 
-print(' ')
-print('------------------')
+    print(' ')
+    print('------------------')
+else:
+    print("Failed to load model or context_length.")
