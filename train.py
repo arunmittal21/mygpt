@@ -7,6 +7,7 @@ from torch import nn
 import os
 from torch.utils.tensorboard import SummaryWriter
 import torchvision.utils as vutils
+import shutil
 
 
 file = "movies-quotes.txt"
@@ -38,6 +39,8 @@ eval_iters = 200
 out_dir = "checkpoint"
 
 # --------- TensorBoard Setup ---------
+shutil.rmtree(f"runs/{file}-{version}", ignore_errors=True)
+
 writer = SummaryWriter(log_dir=f"runs/{file}-{version}")
 dummy_input = torch.zeros(1, context_length, dtype=torch.long).to(device)
 writer.add_graph(model, dummy_input)
@@ -55,10 +58,10 @@ def get_batch(split):
     return x, y
 
 
-@torch.no_grad()
+# @torch.no_grad()
 def estimate_loss():
     out = {}
-    model.eval()
+    # model.eval()
     for split in ["train", "val"]:
         losses = torch.zeros(eval_iters)
         for k in range(eval_iters):
@@ -71,13 +74,13 @@ def estimate_loss():
             loss = nn.functional.cross_entropy(logits, targets)
             losses[k] = loss.item()
         out[split] = losses.mean()
-    model.train()
+    # model.train()
     return out
 
 
-@torch.no_grad()
+# @torch.no_grad()
 def generate_test_samples(max_new_tokens=100):
-    model.eval()
+    # model.eval()
     start_str = "A"
     context = torch.tensor([str_to_int.get(c, 0) for c in start_str], dtype=torch.long)[
         None, :
@@ -92,7 +95,7 @@ def generate_test_samples(max_new_tokens=100):
         next_token = torch.multinomial(probs, num_samples=1)
         context = torch.cat([context, next_token], dim=1)
     result = "".join([int_to_str[int(i)] for i in context[0]])
-    model.train()
+    # model.train()
     return result
 
 
@@ -104,40 +107,54 @@ LOG_MAX_LAYERS = 2
 LOG_MAX_HEADS = 2
 
 for iter in range(max_iters):
-    if iter % eval_interval == 0 or iter == max_iters - 1:
-        losses = estimate_loss()
-        print(
-            f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}"
-        )
-        # TensorBoard logging
-        writer.add_scalar("Loss/train", losses["train"], iter)
-        writer.add_scalar("Loss/val", losses["val"], iter)
-        writer.add_scalar("Learning Rate", learning_rate, iter)
-        writer.add_scalar("Iteration", iter, iter)
-
-        generated_text = generate_test_samples(max_new_tokens=100)
-        writer.add_text("Samples/Generated", generated_text, iter)
-
-    # forward pass
     xb, yb = get_batch("train")
     if iter % eval_interval == 0 or iter == max_iters - 1:
-        logits, attention_weights = model(xb[:1], return_attention=True)  # One sample
-        for layer_idx, layer_attn in enumerate(attention_weights[:LOG_MAX_LAYERS]):
-            # for head_idx, attn in enumerate(layer_attn[:LOG_MAX_HEADS]):
-            #     attn_img = attn[0].unsqueeze(0)
-            #     attn_img = attn_img / (attn_img.max() + 1e-9)  # normalize
-            #     writer.add_image(
-            #         f"Attention/layer{layer_idx}_head{head_idx}", attn_img, iter
-            #     )
-            attn_stack = torch.stack(
-                [attn[0] for attn in layer_attn[:LOG_MAX_HEADS]]
-            )  # shape: [H, T, T]
+        with torch.no_grad():
+            model.eval()
+            losses = estimate_loss()
+            print(
+                f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}"
+            )
+            # TensorBoard logging
+            writer.add_scalar("Loss/train", losses["train"], iter)
+            writer.add_scalar("Loss/val", losses["val"], iter)
+            writer.add_scalar("Learning Rate", learning_rate, iter)
+            writer.add_scalar("Iteration", iter, iter)
+    
+            generated_text = generate_test_samples(max_new_tokens=100)
+            writer.add_text("Samples/Generated", generated_text, iter)
+    
+            _, attention_weights = model(xb[:1], return_attention=True)  # One sample
+            for layer_idx, layer_attn in enumerate(attention_weights[:LOG_MAX_LAYERS]):
+                # for head_idx, attn in enumerate(layer_attn[:LOG_MAX_HEADS]):
+                #     attn_img = attn[0].unsqueeze(0)
+                #     attn_img = attn_img / (attn_img.max() + 1e-9)  # normalize
+                #     writer.add_image(
+                #         f"Attention/layer{layer_idx}_head{head_idx}", attn_img, iter
+                #     )
+                attn_stack = torch.stack(
+                    [attn[0] for attn in layer_attn[:LOG_MAX_HEADS]]
+                )  # shape: [H, T, T]
+                attn_stack = attn_stack / (attn_stack.max() + 1e-9)
+                grid = vutils.make_grid(attn_stack.unsqueeze(1))  # [H,1,T,T] → grid
+                writer.add_image(f"Attention/layer{layer_idx}_grid", grid, iter)
 
-            attn_stack = attn_stack / (attn_stack.max() + 1e-9)
-            grid = vutils.make_grid(attn_stack.unsqueeze(1))  # [H,1,T,T] → grid
-            writer.add_image(f"Attention/layer{layer_idx}_grid", grid, iter)
-    else:
-        logits = model(xb)
+            for name, param in model.named_parameters():
+                writer.add_histogram(f"Weights/{name}", param, iter)
+                if param.grad is not None:
+                    writer.add_histogram(f"Gradients/{name}", param.grad, iter)
+
+            if iter == 0:
+                writer.add_embedding(
+                    model.token_embedding.weight,
+                    metadata=[int_to_str[i] for i in range(vocab_size)],
+                    tag="Token Embeddings",
+                    global_step=iter
+                )            
+            model.train()
+            
+    # forward pass
+    logits = model(xb)
 
     # evaluate the model
     # logits = model(xb)
@@ -148,18 +165,12 @@ for iter in range(max_iters):
     loss = nn.functional.cross_entropy(logits, targets)
     optimizer.zero_grad(set_to_none=True)
     loss.backward()
-    for name, param in model.named_parameters():
-        writer.add_histogram(f"Weights/{name}", param, iter)
-        if param.grad is not None:
-            writer.add_histogram(f"Gradients/{name}", param.grad, iter)
+    # for name, param in model.named_parameters():
+    #     writer.add_histogram(f"Weights/{name}", param, iter)
+    #     if param.grad is not None:
+    #         writer.add_histogram(f"Gradients/{name}", param.grad, iter)
 
     optimizer.step()
-    if iter == 0:
-        writer.add_embedding(
-            model.token_embedding.weight,
-            metadata=[int_to_str[i] for i in range(vocab_size)],
-            tag="Token Embeddings",
-        )
 
 
 # context_length = 128 #block_size
