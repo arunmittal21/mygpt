@@ -12,14 +12,25 @@ else:
 
 print(f"Using device: {device}")
 
+
 class GPT(nn.Module):
-    
-    def __init__(self, vocab_size: int, context_length: int, model_dim: int, num_blocks: int, num_heads: int, dropout: float):
+
+    def __init__(
+        self,
+        vocab_size: int,
+        context_length: int,
+        model_dim: int,
+        num_blocks: int,
+        num_heads: int,
+        dropout: float,
+    ):
         super().__init__()
         # torch.manual_seed(0)
         self.token_embedding = nn.Embedding(vocab_size, model_dim)
         self.position_embedding = nn.Embedding(context_length, model_dim)
-        self.blocks = nn.Sequential(*[TransformerBlock(model_dim, num_heads) for _ in range(num_blocks)])
+        self.blocks = nn.Sequential(
+            *[TransformerBlock(model_dim, num_heads) for _ in range(num_blocks)]
+        )
         self.final_norm = nn.LayerNorm(model_dim)
         self.output_projection = nn.Linear(model_dim, vocab_size)
         # self.dropout = dropout
@@ -44,7 +55,7 @@ class GPT(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    
+
     def __init__(self, model_dim: int, num_heads: int):
         super().__init__()
         # torch.manual_seed(0)
@@ -67,11 +78,13 @@ class MultiHeadedSelfAttention(nn.Module):
     def __init__(self, model_dim: int, num_heads: int):
         super().__init__()
         # torch.manual_seed(0)
-        self.num_heads = num_heads
-        self.att_heads = nn.ModuleList([
-            SingleHeadAttention(model_dim, model_dim // num_heads)
-            for _ in range(num_heads)
-        ])
+        # self.num_heads = num_heads
+        self.att_heads = nn.ModuleList(
+            [
+                SingleHeadAttention(model_dim, model_dim // num_heads)
+                for _ in range(num_heads)
+            ]
+        )
         self.output_proj = nn.Linear(model_dim, model_dim)
         self.dropout = nn.Dropout(0.2)
 
@@ -101,7 +114,7 @@ class SingleHeadAttention(nn.Module):
         scores /= k.shape[2] ** 0.5
 
         mask = torch.tril(torch.ones(k.shape[1], k.shape[1])).to(device) == 0
-        scores = scores.masked_fill(mask, float('-inf'))
+        scores = scores.masked_fill(mask, float("-inf"))
         scores = nn.functional.softmax(scores, dim=2)
 
         return scores @ v

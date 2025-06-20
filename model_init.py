@@ -12,9 +12,11 @@ from data import vocab_size
 # import torch
 # from torch import nn
 # vocab_size = 155
-context_length = 128 #block_size
+context_length = 128  # block_size
 model_dim = 252
 num_blocks = 6
 num_heads = 6
 dropout = 0.2
-MY_MODEL = GPT(vocab_size, context_length, model_dim, num_blocks, num_heads, dropout).to(device)
+MY_MODEL = GPT(
+    vocab_size, context_length, model_dim, num_blocks, num_heads, dropout
+).to(device)
