@@ -7,7 +7,7 @@ from torch import nn
 import os
 
 
-# file = "movie-quotes.txt"
+# file = "movies-quotes.txt"
 # sep = "~"
 file = "dad_jokes.csv"
 sep = ","
@@ -29,7 +29,7 @@ model = GPT(vocab_size, context_length, model_dim, num_blocks, num_heads, dropou
 
 version = "v1"
 batch_size = 64
-max_iters = 100
+max_iters = 7500
 eval_interval = 500
 learning_rate = 3e-4
 eval_iters = 200

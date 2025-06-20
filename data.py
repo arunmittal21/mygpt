@@ -4,7 +4,7 @@ import torch
 
 def get_data(file="training_data/dad_jokes.csv", sep=","):
     df = pd.read_csv(file, sep=sep)
-    column_text = df.iloc[:, -1].astype(str).str.cat(sep=" ")
+    column_text = df.iloc[:, -1].astype(str).str.cat(sep="\n")
 
     # df = pd.read_csv('training_data/movies-quotes.txt', sep="~")
     # df_shuffled = df.sample(frac=1, random_state=42)  # Set random_state for reproducibility
