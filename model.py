@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torchtyping import TensorType
+from typing import Union, Tuple
 
 # device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 if torch.cuda.is_available():
@@ -44,14 +45,28 @@ class GPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, context: TensorType[float]) -> TensorType[float]:
+    def forward(
+        self, context: TensorType[float], return_attention=False
+    ) -> Union[TensorType[float], Tuple[TensorType[float], TensorType[float]]]:
         # torch.manual_seed(0)
         tok_embed = self.token_embedding(context)
         pos_embed = self.position_embedding(torch.arange(context.shape[1]).to(device))
         embedded = tok_embed + pos_embed
-        out = self.blocks(embedded)
-        out = self.final_norm(out)
-        return self.output_projection(out)
+        if return_attention:
+            attention_weights = []
+            x = embedded
+            for block in self.blocks:
+                attn, x = block(x, return_attention=True)
+                attention_weights.append(attn)
+            out = self.final_norm(x)
+            return self.output_projection(out), attention_weights
+        else:
+            out = self.blocks(embedded)
+            out = self.final_norm(out)
+            return self.output_projection(out)
+        # out = self.blocks(embedded)
+        # out = self.final_norm(out)
+        # return self.output_projection(out)
 
 
 class TransformerBlock(nn.Module):
@@ -64,13 +79,26 @@ class TransformerBlock(nn.Module):
         self.attention = MultiHeadedSelfAttention(model_dim, num_heads)
         self.ff = FeedForward(model_dim)
 
-    def forward(self, embedded: TensorType[float]) -> TensorType[float]:
-        # torch.manual_seed(0)
+    def forward(
+        self, embedded: TensorType[float], return_attention=False
+    ) -> Union[TensorType[float], Tuple[TensorType[float], TensorType[float]]]:
         x = self.norm1(embedded)
-        x = self.attention(x) + embedded
+        attn_weights = None
+        if return_attention:
+            attn_weights, x = self.attention(x, return_weights=True)
+        else:
+            x = self.attention(x)
+        x = x + embedded
         x = self.norm2(x)
         x = self.ff(x) + x
-        return x
+        return (attn_weights, x) if return_attention else x
+
+        # # torch.manual_seed(0)
+        # x = self.norm1(embedded)
+        # x = self.attention(x) + embedded
+        # x = self.norm2(x)
+        # x = self.ff(x) + x
+        # return x
 
 
 class MultiHeadedSelfAttention(nn.Module):
@@ -88,11 +116,23 @@ class MultiHeadedSelfAttention(nn.Module):
         self.output_proj = nn.Linear(model_dim, model_dim)
         self.dropout = nn.Dropout(0.2)
 
-    def forward(self, embedded: TensorType[float]) -> TensorType[float]:
+    def forward(
+        self, embedded: TensorType[float], return_weights=False
+    ) -> Union[TensorType[float], Tuple[TensorType[float], TensorType[float]]]:
         # torch.manual_seed(0)
-        heads = [head(embedded) for head in self.att_heads]
-        concatenated = torch.cat(heads, dim=2)
-        return self.dropout(self.output_proj(concatenated))
+        if return_weights:
+            all_weights = []
+            all_outputs = []
+            for head in self.att_heads:
+                weights, out = head(embedded, return_weights=True)
+                all_weights.append(weights)
+                all_outputs.append(out)
+            concatenated = torch.cat(all_outputs, dim=2)
+            return all_weights, self.dropout(self.output_proj(concatenated))
+        else:
+            heads = [head(embedded) for head in self.att_heads]
+            concatenated = torch.cat(heads, dim=2)
+            return self.dropout(self.output_proj(concatenated))
 
 
 class SingleHeadAttention(nn.Module):
@@ -104,7 +144,9 @@ class SingleHeadAttention(nn.Module):
         self.query_gen = nn.Linear(model_dim, head_size, bias=False)
         self.value_gen = nn.Linear(model_dim, head_size, bias=False)
 
-    def forward(self, embedded: TensorType[float]) -> TensorType[float]:
+    def forward(
+        self, embedded: TensorType[float], return_weights: bool = False
+    ) -> Union[TensorType[float], Tuple[TensorType[float], TensorType[float]]]:
         # torch.manual_seed(0)
         k = self.key_gen(embedded)
         q = self.query_gen(embedded)
@@ -117,7 +159,11 @@ class SingleHeadAttention(nn.Module):
         scores = scores.masked_fill(mask, float("-inf"))
         scores = nn.functional.softmax(scores, dim=2)
 
-        return scores @ v
+        weights = nn.functional.softmax(scores, dim=2)
+
+        if return_weights:
+            return weights, weights @ v
+        return weights @ v
 
 
 class FeedForward(nn.Module):
