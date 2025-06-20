@@ -10,10 +10,10 @@ import torchvision.utils as vutils
 import shutil
 
 
-# file = "movies-quotes.txt"
-# sep = "~"
-file = "dad_jokes.csv"
-sep = ","
+file = "movies-quotes.txt"
+sep = "~"
+# file = "dad_jokes.csv"
+# sep = ","
 
 vocab_size, train_data, test_data, str_to_int, int_to_str = get_data(
     f"training_data/{file}", sep
@@ -125,7 +125,7 @@ for iter in range(max_iters):
             writer.add_text("Samples/Generated", generated_text, iter)
     
             attention_weights = model.get_attention_weights(xb[:1]) # One sample # type: ignore
-            for layer_idx, layer_attn in enumerate(attention_weights[:LOG_MAX_LAYERS]):
+            for layer_idx, layer_attn in enumerate(attention_weights[:]):
                 # for head_idx, attn in enumerate(layer_attn[:LOG_MAX_HEADS]):
                 #     attn_img = attn[0].unsqueeze(0)
                 #     attn_img = attn_img / (attn_img.max() + 1e-9)  # normalize
@@ -133,7 +133,7 @@ for iter in range(max_iters):
                 #         f"Attention/layer{layer_idx}_head{head_idx}", attn_img, iter
                 #     )
                 attn_stack = torch.stack(
-                    [attn[0] for attn in layer_attn[:LOG_MAX_HEADS]]
+                    [attn[0] for attn in layer_attn[:]]
                 )  # shape: [H, T, T]
                 attn_stack = attn_stack / (attn_stack.max() + 1e-9)
                 grid = vutils.make_grid(attn_stack.unsqueeze(1))  # [H,1,T,T] → grid
