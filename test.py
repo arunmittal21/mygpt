@@ -108,7 +108,7 @@ def test(file, generate_len=300):
 
 if __name__ == "__main__":
     # test("dadjokes-2.pt", generate_len=300)
-    test("checkpoint/dad_jokes.csv.pt", generate_len=1000)
+    test("checkpoint/movies-quotes.txt-v1.pt", generate_len=1000)
     # test("dadjokes-4.pt", generate_len=300)
     # test("dadjokes-5.pt", generate_len=300)
     # test("dadjokes-6.pt", generate_len=300)

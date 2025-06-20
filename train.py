@@ -5,6 +5,7 @@ from model import GPT, device
 import torch
 from torch import nn
 import os
+from torch.utils.tensorboard import SummaryWriter
 
 
 # file = "movies-quotes.txt"
@@ -27,7 +28,7 @@ model = GPT(vocab_size, context_length, model_dim, num_blocks, num_heads, dropou
     device
 )
 
-version = "v1"
+version = "v2"
 batch_size = 64
 max_iters = 7500
 eval_interval = 500
@@ -35,7 +36,13 @@ learning_rate = 3e-4
 eval_iters = 200
 out_dir = "checkpoint"
 
+# --------- TensorBoard Setup ---------
+writer = SummaryWriter(log_dir=f"runs/{file}-{version}")
+dummy_input = torch.zeros(1, context_length, dtype=torch.long).to(device)
+writer.add_graph(model, dummy_input)
 
+# --------------------------------------
+# get a batch of data
 def get_batch(split):
     # generate a small batch of data of inputs x and targets y
     data = train_data if split == "train" else test_data
@@ -77,6 +84,9 @@ for iter in range(max_iters):
         print(
             f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}"
         )
+        # TensorBoard logging
+        writer.add_scalar("Loss/train", losses["train"], iter)
+        writer.add_scalar("Loss/val", losses["val"], iter)
 
     xb, yb = get_batch("train")
 
@@ -112,6 +122,7 @@ checkpoint = {
 
 print(f'saving checkpoint to {os.path.join(out_dir, f"{file}-{version}.pt")}')
 torch.save(checkpoint, os.path.join(out_dir, f"{file}-{version}.pt"))
+writer.close()
 
 import test
 
