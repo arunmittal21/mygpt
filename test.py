@@ -1,6 +1,7 @@
 # from model_init import MY_MODEL as model,context_length, device
 from model import GPT, device
-from data import decode, int_to_str
+# from data import decode, int_to_str
+from data import get_encoder_decoder
 import torch
 import os
 
@@ -33,6 +34,7 @@ def load_model(weights='ckpt.pt'):
         model.load_state_dict(checkpoint['model'])
         model.eval()
         print("Model loaded successfully.")
+        encode, decode = get_encoder_decoder(checkpoint['str_to_int'],checkpoint['int_to_str'])
         return model,context_length
     else:
         print(f"No checkpoint found at {checkpoint_path}.")
@@ -59,21 +61,21 @@ def generate(model, new_chars: int, context, context_length: int, int_to_str: di
         yield next_char_decoded
     # return ''.join(res)
 
-
-# model = load_model('dadjokes-2.pt')
-model, context_length = load_model('movie-dialogs.pt')
-generate_len = 300  # block_size
-
-if model is not None and context_length is not None:
-    context = torch.zeros(1, 1, dtype=torch.int64).to(device)
-    print(context)
-
-    for char in generate(model, new_chars=generate_len, context=context,
-                         context_length=context_length, int_to_str=int_to_str,
-                         temperature=0.5):
-        print(char, end='')  # print each character without newline
-
-    print(' ')
-    print('------------------')
-else:
-    print("Failed to load model or context_length.")
+def test(file, generate_len = 300):
+    # model = load_model('dadjokes-2.pt')
+    model, context_length = load_model(file)
+    # generate_len = 300  # block_size
+    
+    if model is not None and context_length is not None:
+        context = torch.zeros(1, 1, dtype=torch.int64).to(device)
+        print(context)
+    
+        for char in generate(model, new_chars=generate_len, context=context,
+                             context_length=context_length, int_to_str=int_to_str,
+                             temperature=0.5):
+            print(char, end='')  # print each character without newline
+    
+        print(' ')
+        print('------------------')
+    else:
+        print("Failed to load model or context_length.")

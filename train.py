@@ -1,5 +1,6 @@
-from data import train_data, test_data, encode, decode
-from model_init import MY_MODEL as model, context_length, device
+from data import get_data, get_encoder_decoder
+# from model_init import MY_MODEL as model, context_length, device
+from model import GPT, device
 import torch
 from torch import nn
 import os
@@ -12,15 +13,29 @@ import os
 # dropout = 0.2
 # model = GPT(vocab_size, context_length, model_dim, num_blocks, num_heads,dropout).to(device)
 
+file = 'movie-quotes.txt'
+sep='~'
+file = 'dad_jokes.csv'
+sep=','
+
+vocab_size, train_data, test_data, str_to_int, int_to_str = get_data(f'training_data/{file}', sep)
+
+encode, decode = get_encoder_decoder(str_to_int, int_to_str)
+
+context_length = 128 #block_size
+model_dim = 252
+num_blocks = 6
+num_heads = 6
+dropout = 0.2
+MY_MODEL = GPT(vocab_size, context_length, model_dim, num_blocks, num_heads, dropout).to(device)
+
 
 batch_size = 64
-max_iters = 7500
+max_iters = 500
 eval_interval = 500
 learning_rate = 3e-4
 eval_iters = 200
 out_dir='checkpoint'
-
-
 
 
 def get_batch(split):
@@ -89,11 +104,13 @@ checkpoint = {
     'model_dim': model.token_embedding.embedding_dim,
     'num_blocks': len(model.blocks),
     'num_heads': model.blocks[0].attention.num_heads,
-    'dropout': 0.2
+    'dropout': 0.2,
+    'str_to_int': str_to_int,
+    'int_to_str': int_to_str
 }
 
 print(f"saving checkpoint to {out_dir}")
-torch.save(checkpoint, os.path.join(out_dir, 'ckpt.pt'))
+torch.save(checkpoint, os.path.join(out_dir, f'checkpoint/{file}.pt'))
 
 import test
-
+test.test(f'checkpoint/{file}.pt')
