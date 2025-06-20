@@ -8,10 +8,10 @@ import os
 from torch.utils.tensorboard import SummaryWriter
 
 
-# file = "movies-quotes.txt"
-# sep = "~"
-file = "dad_jokes.csv"
-sep = ","
+file = "movies-quotes.txt"
+sep = "~"
+# file = "dad_jokes.csv"
+# sep = ","
 
 vocab_size, train_data, test_data, str_to_int, int_to_str = get_data(
     f"training_data/{file}", sep
